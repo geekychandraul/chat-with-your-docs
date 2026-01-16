@@ -1,0 +1,44 @@
+# Pull base image from AWS ECR Public
+
+FROM python:3.12-slim
+
+ARG FUNCTION_DIR="/src"
+RUN mkdir -p ${FUNCTION_DIR}
+WORKDIR ${FUNCTION_DIR}
+
+# Libraries and build dependencies (required for cryptography and any libs requiring a compiler)
+RUN apt-get -qq update && apt-get -y upgrade && apt-get install --reinstall build-essential -y \
+  && \
+  apt install netcat-traditional \
+  && \
+  apt-get -y install \
+  git \
+  && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+
+RUN mkdir -p -m 0700 ~/.ssh && \
+  ssh-keyscan github.com >> ~/.ssh/known_hosts && \
+  ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
+
+# Installing dependency package - python
+RUN pip install --upgrade pip  \
+  aws-encryption-sdk-cli \
+  awscli pipenv debugpy
+# Copied requirements
+# COPY Pipfile Pipfile.lock ${FUNCTION_DIR}/
+COPY requirements.txt ${FUNCTION_DIR}/
+
+# Install any needed packages specified in requirements.txt
+# RUN --mount=type=ssh pip install -r requirements.txt
+RUN  pip install -r requirements.txt
+
+# Copy Project
+ADD ./src ${FUNCTION_DIR}
+ADD ${FUNCTION_DIR}/config/ /
+# exposing port 5000
+EXPOSE 9000
+EXPOSE 5678
+
+CMD python -m debugpy --log-to-stderr --listen 0.0.0.0:5678 ./run_server.py

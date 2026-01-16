@@ -1,0 +1,60 @@
+services:
+  backend:
+    container_name: backend_test_rag
+    environment:
+      - PYTHONUNBUFFERED=1
+    build:
+      context: .
+      ssh:
+        - default
+      dockerfile: ./Dockerfile-local
+    ports:
+      - 9000:9000
+      - 5678:5678 # for debugpy
+    restart: always
+    volumes:
+      - ./data/chroma:/src/chroma
+      - ./src:/src
+
+    depends_on:
+      - db
+
+  db:
+    container_name: db_test_rag
+    image: postgres:13
+    environment:
+      POSTGRES_USER: hello_fastapi
+      POSTGRES_PASSWORD: hello_fastapi
+      POSTGRES_DB: rag_db
+    ports:
+      - 5432:5432
+    restart: always
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+
+  gradio:
+    container_name: gradio_test_rag
+    build:
+      context: .
+      dockerfile: ./Dockerfile-gradio
+    ports:
+      - 7860:7860
+    depends_on:
+      - backend
+    restart: always
+
+  adminer:
+    container_name: adminer_test_rag
+    image: adminer
+    restart: always
+    ports:
+      - "8081:8081"
