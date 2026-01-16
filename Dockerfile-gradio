@@ -1,0 +1,18 @@
+FROM python:3.12-slim
+
+WORKDIR /src
+
+# System deps
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python deps
+RUN pip install --no-cache-dir gradio requests
+
+# Copy Gradio app
+COPY src/frontend/gradio_app.py /src/gradio_app.py
+
+EXPOSE 7860
+
+CMD python /src/gradio_app.py
