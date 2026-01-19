@@ -50,6 +50,10 @@ services:
       - 7860:7860
     depends_on:
       - backend
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./src/frontend:/src/frontend
     restart: always
 
   adminer:

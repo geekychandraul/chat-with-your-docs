@@ -19,8 +19,8 @@ db-user := $(POSTGRES_USER)
 init:
 	make run_server && \
 	sleep 3 && \
-	make create_schema && \
 	make db_migrate
+# 	make create_schema && \
 
 run_server:
 	@docker compose up -d backend db gradio

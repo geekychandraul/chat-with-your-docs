@@ -7,7 +7,7 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-def http_exception_handler(request: Request, exc: HTTPException):
+def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """
     Handle HTTPException and return a JSON response.
 

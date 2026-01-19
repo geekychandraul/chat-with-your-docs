@@ -1,3 +1,5 @@
+import uuid
+
 from app.core.db.chroma import get_vectorstore
 
 
@@ -7,9 +9,9 @@ class RetrievalService:
 
         By default the retriever is configured to return the top-k candidates.
         """
-        self.retriever = get_vectorstore().as_retriever(search_kwargs={"k": 4})
+        self.vectorstore = get_vectorstore()
 
-    def retrieve(self, query: str):
+    def retrieve(self, query: str, user_id: uuid.UUID):
         """Run a similarity search against the vector store.
 
         Args:
@@ -18,4 +20,12 @@ class RetrievalService:
         Returns:
             List[Document]: documents returned by the retriever.
         """
-        return self.retriever.invoke(query)
+        retriever = get_vectorstore().as_retriever(
+            search_kwargs={
+                "k": 4,
+                "filter": {
+                    "user_id": str(user_id),
+                },
+            }
+        )
+        return retriever.invoke(query)

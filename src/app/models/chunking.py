@@ -1,3 +1,5 @@
+import uuid as uuid_pkg
+
 from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -14,4 +16,7 @@ class DocumentChunk(Base):
     chroma_id: Mapped[str] = mapped_column(String)
     id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default_factory=uuid7
+    )
+    user_id: Mapped[uuid_pkg.UUID] = mapped_column(
+        ForeignKey("user.uuid"), default=None, nullable=True
     )

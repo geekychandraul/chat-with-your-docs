@@ -14,4 +14,4 @@ This project adheres to [semantic versioning](https://semver.org/), and changes 
 - Added CHANGELOG.md file
 
 ### Related tickets:
-- [INTG-736](https://annalect.atlassian.net/browse/INTG-736)
+    []

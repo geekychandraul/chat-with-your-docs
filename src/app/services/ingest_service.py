@@ -1,4 +1,5 @@
 import hashlib
+import uuid
 
 from fastapi.exceptions import HTTPException
 
@@ -38,7 +39,7 @@ class IngestService:
         self.audit = AuditRepository(db)
         self.vs = get_vectorstore()
 
-    async def ingest(self, file):
+    async def ingest(self, file, user_id: uuid.UUID):
         """Ingest a single uploaded file.
 
         This method reads the uploaded file, calculates a SHA256 hash to
@@ -78,6 +79,7 @@ class IngestService:
                     filename=file.filename,
                     file_hash=file_hash,
                     status="processing",
+                    user_id=user_id,
                 )
             await self.files.save(file_meta)
             # Reload file stream
@@ -89,11 +91,12 @@ class IngestService:
             metadatas = [
                 {
                     "file_id": str(file_meta.id),
+                    "user_id": str(user_id),
                     **c.metadata,
                 }
                 for c in chunks
             ]
-
+            print("metadatas", metadatas)
             # Create embedding in chroma
             ids = self.vs.add_texts(texts=texts, metadatas=metadatas)
 
@@ -111,11 +114,13 @@ class IngestService:
             file_meta.status = "processed"
             await self.db.commit()
 
-            await self.audit.log("INGEST_SUCCESS", {"file_id": str(file_meta.id)})
+            await self.audit.log(
+                "INGEST_SUCCESS", {"file_id": str(file_meta.id)}, user_id=user_id
+            )
             return {"status": "ingested", "file_id": str(file_meta.id)}
         except Exception as e:
             file_meta.status = "failed"  # type: ignore
             await self.db.commit()
-            await self.audit.log("INGEST_FAILED", {"error": str(e)})
+            await self.audit.log("INGEST_FAILED", {"error": str(e)}, user_id)
             logger.exception("Ingestion failed: %s", e)
             raise HTTPException(status_code=500, detail="Ingestion failed") from e

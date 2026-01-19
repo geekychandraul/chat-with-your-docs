@@ -11,8 +11,9 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir gradio requests
 
 # Copy Gradio app
-COPY src/frontend/gradio_app.py /src/gradio_app.py
+# COPY src/frontend/gradio_app.py /src/frontend/gradio_app.py
+ADD src/frontend/gradio_app.py /src/frontend/gradio_app.py
 
 EXPOSE 7860
 
-CMD python /src/gradio_app.py
+CMD python /src/frontend/gradio_app.py

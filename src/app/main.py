@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.apis.v1 import chat, health, ingest
+from app.apis.v1 import auth, chat, health, ingest
 from app.core.config import settings
 from app.core.exceptions.custom_exceptions import http_exception_handler
 from app.core.logging import setup_logging
@@ -26,4 +26,5 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(ingest.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
+app.include_router(auth.router)
 app.add_exception_handler(HTTPException, http_exception_handler)
