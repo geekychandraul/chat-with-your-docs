@@ -1,7 +1,11 @@
+import uuid
+
+from fastapi.exceptions import HTTPException
+
 from app.core.logging import get_logger
 from app.models.chat import ChatMessage
 from app.repositories.audit_repo import AuditRepository
-from app.repositories.chat_repo import ChatRepository
+from app.repositories.chat_repo import ChatRepository, Conversation
 from app.services.retrieval_service import RetrievalService
 from app.utils.chains import build_streaming_chain
 from app.utils.history import format_history
@@ -23,7 +27,26 @@ class ChatService:
         self.retrieval = RetrievalService()
         self.chain = build_streaming_chain()
 
-    async def stream_answer_sse(self, conversation_id, user_message: str):
+    async def validate_or_create_conversation_id(
+        self, conversation_id, user_id: uuid.UUID
+    ):
+        # Create conversation if not exists
+        if not conversation_id:
+            logger.info("No conversation ID provided; creating a new one.")
+            conversation = Conversation(user_id=user_id)
+            conversation_id = await self.chat_repo.create_conversation(conversation)
+        elif conversation_id and not await self.chat_repo.get_conversation(
+            conversation_id
+        ):
+            logger.error("Conversation_id not found. Raising HTTP 404.")
+            raise HTTPException(
+                status_code=404, detail="Conversation ID does not exist."
+            )
+        return conversation_id
+
+    async def stream_answer_sse(
+        self, conversation_id, user_message: str, user_id: uuid.UUID
+    ):
         """Stream an answer back to the client using Server-Sent Events (SSE).
 
         Args:
@@ -34,13 +57,6 @@ class ChatService:
         Yields:
             SSE formatted event strings (conversation id, token events, done).
         """
-        # Create conversation if not exists
-        if not conversation_id:
-            conversation_id = await self.chat_repo.create_conversation()
-        elif conversation_id and not await self.chat_repo.get_conversation(
-            conversation_id
-        ):
-            raise ValueError("Conversation ID does not exist.")
         yield ("event: conversation\n" f"data: {conversation_id}\n\n")
 
         # Load history from DB
@@ -48,7 +64,8 @@ class ChatService:
         history_text = format_history(past_messages)
 
         # Retrieve context
-        docs = self.retrieval.retrieve(user_message)
+        docs = self.retrieval.retrieve(user_message, user_id)
+        print("Retrieved %d documents for context.", len(docs), docs[:2])
 
         # Persist user message
         await self.chat_repo.save(
@@ -87,6 +104,10 @@ class ChatService:
         await self.audit_repo.log(
             "CHAT_STREAM_COMPLETED",
             {"conversation_id": str(conversation_id)},
+            user_id=user_id,
         )
 
         yield "event: done\ndata: [DONE]\n\n"
+
+
+# Str1ngst!

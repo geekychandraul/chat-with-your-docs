@@ -15,16 +15,15 @@ class ChatRepository:
         """
         self.db = db
 
-    async def create_conversation(self) -> uuid.UUID:
+    async def create_conversation(self, conversation: Conversation) -> uuid.UUID:
         """Create and persist a new Conversation record.
 
         Returns:
             uuid.UUID: the UUID of the created conversation.
         """
-        convo = Conversation()
-        self.db.add(convo)
+        self.db.add(conversation)
         await self.db.commit()
-        return convo.uuid
+        return conversation.uuid
 
     async def get_conversation(self, conversation_id):
         """Retrieve conversations matching the provided UUID.

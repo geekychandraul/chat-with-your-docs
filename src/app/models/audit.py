@@ -1,7 +1,7 @@
 import uuid as uuid_pkg
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, TIMESTAMP, String
+from sqlalchemy import JSON, TIMESTAMP, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -16,9 +16,11 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String)
     metadatas: Mapped[dict] = mapped_column(JSON)
     uuid: Mapped[uuid_pkg.UUID] = mapped_column(
-        UUID(as_uuid=True), default_factory=uuid7, unique=True, primary_key=True
+        UUID(as_uuid=True), default_factory=uuid7, primary_key=True
     )
-
+    user_id: Mapped[uuid_pkg.UUID] = mapped_column(
+        ForeignKey("user.uuid"), nullable=True, default=None
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         server_default=func.now(),

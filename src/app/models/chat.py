@@ -23,6 +23,9 @@ class Conversation(Base):
         primary_key=True,
         default_factory=uuid7,
     )
+    user_id: Mapped[uuid_pkg.UUID] = mapped_column(
+        ForeignKey("user.uuid"), nullable=True, default=None
+    )
 
 
 class ChatMessage(Base):
@@ -33,7 +36,7 @@ class ChatMessage(Base):
         ForeignKey("conversations.uuid"), index=True, default=None
     )
     uuid: Mapped[uuid_pkg.UUID] = mapped_column(
-        UUID(as_uuid=True), default_factory=uuid7, unique=True, primary_key=True
+        UUID(as_uuid=True), default_factory=uuid7, primary_key=True
     )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),

@@ -58,7 +58,7 @@ class PostgresSettings(DatabaseSettings):
     POSTGRES_SYNC_PREFIX: str = "postgresql+psycopg2://"
     POSTGRES_ASYNC_PREFIX: str = "postgresql+asyncpg://"
     POSTGRES_URL: str | None = None
-    POSTGRES_DB_SCHEMA: str = "public"
+    POSTGRES_DB_SCHEMA: str | None = None
     # SQLALCHEMY_DATABASE_URI = (
     # "postgresql+psycopg2://hello_fastapi:hello_fastapi@localhost:5432/rag_db"
     # )

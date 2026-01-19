@@ -3,51 +3,100 @@ import os
 import gradio as gr
 import requests
 
-from app.core.logging import get_logger
-
-logger = get_logger(__name__)
-
 BASE_URL = "http://backend:9000/api/v1"
 
 
-def ingest_file(file_list):
+def api_login(username, password):
     """
-    Simulates sending the file to your backend FastAPI /ingest endpoint.
+    Hits the FastAPI /login endpoint to get a JWT.
     """
+    print(f"Attempting login for user: {username}")
+    login_url = "http://backend:9000/login"
+    try:
+        response = requests.post(
+            login_url, data={"username": username, "password": password}
+        )
+
+        if response.status_code == 200:
+            print(f"Login successful! {response.json()}")
+            token = response.json().get("access_token")
+            return token, gr.update(visible=False), gr.update(visible=True), ""
+        else:
+            print(f"Login failed: {response.text}")
+            return (
+                None,
+                gr.update(visible=True),
+                gr.update(visible=False),
+                f"Error: {response.text}",
+            )
+
+    except Exception as e:
+        return (
+            None,
+            gr.update(visible=True),
+            gr.update(visible=False),
+            f"Connection Error: {str(e)}",
+        )
+
+
+def ingest_file(file_list, token):
+    """
+    Uploads file with Bearer Token.
+    """
+    if not token:
+        return "⚠️ Authentication Error: Please log in again."
+
     api_url = f"{BASE_URL}/ingest"
     if not file_list:
         return "No file selected."
 
+    headers = {"Authorization": f"Bearer {token}"}
+
     responses = []
     for f in file_list:
         filename = os.path.basename(f)
-        files = {"file": open(f, "rb")}
-        response = requests.post(api_url, files=files)
-        if response.status_code != 200:
-            responses.append(f"{filename}: ❌ Error: {response.text}")
-        else:
-            responses.append(f"{filename}: ✅ Success: {response.text}")
+        try:
+            with open(f, "rb") as file_obj:
+                files = {"file": file_obj}
+                response = requests.post(api_url, files=files, headers=headers)
+
+            if response.status_code != 200:
+                responses.append(f"{filename}: ❌ Error: {response.text}")
+            else:
+                responses.append(f"{filename}: ✅ Success. Response: {response.json()}")
+        except Exception as e:
+            responses.append(f"{filename}: ❌ System Error: {str(e)}")
+
     return "\n".join(responses)
 
 
-def stream_chat(user_input, chat_history, conversation_id):
+def stream_chat(user_input, chat_history, conversation_id, token):
     """
-    Calls FastAPI SSE endpoint.
-    - Receives conversation_id from backend (first event)
-    - Streams tokens
-    - Persists conversation_id in Gradio state
+    Streams chat with Bearer Token.
     """
+    if not token:
+        chat_history.append(
+            {
+                "role": "assistant",
+                "content": "⚠️ Session expired. Please refresh and log in.",
+            }
+        )
+        yield "", chat_history, conversation_id
+        return
+
     CHAT_API_URL = f"{BASE_URL}/chat"
+
     if not user_input.strip():
-        # Yield current state unchanged
         yield user_input, chat_history, conversation_id
         return
+
     payload = {
-        "conversation_id": conversation_id,  # None for first message
+        "conversation_id": conversation_id,
         "message": user_input,
     }
 
     headers = {
+        "Authorization": f"Bearer {token}",
         "Accept": "text/event-stream",
         "Content-Type": "application/json",
     }
@@ -56,113 +105,133 @@ def stream_chat(user_input, chat_history, conversation_id):
     chat_history.append({"role": "user", "content": user_input})
     yield "", chat_history, conversation_id
 
-    with requests.post(
-        CHAT_API_URL,
-        json=payload,
-        headers=headers,
-        stream=True,
-    ) as response:
-        event_type = None
-        chat_history.append({"role": "assistant", "content": ""})
+    try:
+        with requests.post(
+            CHAT_API_URL,
+            json=payload,
+            headers=headers,
+            stream=True,
+        ) as response:
+            # Handle 401 specifically
+            if response.status_code == 401:
+                chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": "❌ Unauthorized. Check your login.",
+                    }
+                )
+                yield "", chat_history, conversation_id
+                return
 
-        for raw_line in response.iter_lines(decode_unicode=True):
-            logger.debug("Raw line: %s", raw_line)
-            if not raw_line:
-                continue
+            event_type = None
+            chat_history.append({"role": "assistant", "content": ""})
 
-            # SSE event line
-            if raw_line.startswith("event:"):
-                event_type = raw_line.replace("event:", "").strip()
-                continue
-
-            # SSE data line
-            if raw_line.startswith("data:"):
-                data = raw_line.replace("data:", "")
-
-                # Conversation ID from backend (first message only)
-                if event_type == "conversation":
-                    current_conversation_id = data.strip()
-                    yield "", chat_history, current_conversation_id
+            for raw_line in response.iter_lines(decode_unicode=True):
+                if not raw_line:
                     continue
 
-                # End of stream
-                if event_type == "done":
-                    break
+                if raw_line.startswith("event:"):
+                    event_type = raw_line.replace("event:", "").strip()
+                    continue
 
-                # Token streaming
-                if event_type == "token":
-                    assistant_message += data
-                    chat_history[-1]["content"] = assistant_message
+                if raw_line.startswith("data:"):
+                    data = raw_line.replace("data:", "")
 
-                    yield "", chat_history, current_conversation_id
+                    if event_type == "conversation":
+                        current_conversation_id = data.strip()
+                        yield "", chat_history, current_conversation_id
+                        continue
 
+                    if event_type == "done":
+                        break
 
-def reset_conversation():
-    """Start a fresh conversation"""
-    return None, []
+                    if event_type == "token":
+                        assistant_message += data
+                        chat_history[-1]["content"] = assistant_message
+                        yield "", chat_history, current_conversation_id
+    except Exception as e:
+        chat_history.append(
+            {"role": "assistant", "content": f"❌ Connection Error: {str(e)}"}
+        )
+        yield "", chat_history, conversation_id
 
 
 def reset_logic():
-    """
-    Resets Chatbot, Input Box, and Conversation ID State.
-    """
     return [], "", None
 
 
-# --- UI Layout ---
 with gr.Blocks() as demo:
-    gr.Markdown("### Chatbot with Send & Reset")
+    token_state = gr.State(None)  # Stores the JWT Token
+    conversation_state = gr.State(None)  # Stores Conversation ID
 
-    # Hidden State for ID
-    state = gr.State(None)
-    with gr.Row(variant="panel"):
-        with gr.Column(scale=1):
-            # The File Upload Component
-            file_input = gr.File(
-                label="Upload Document (PDF/TXT/DOCX)",
-                file_count="multiple",
-                type="filepath",
+    gr.Markdown("## Enterprise RAG Interface")
+
+    # VIEW 1: LOGIN SCREEN
+    with gr.Column(visible=True) as login_view:
+        gr.Markdown("### Please Log In")
+        username_input = gr.Textbox(label="Username")
+        password_input = gr.Textbox(label="Password", type="password")
+        login_btn = gr.Button("Login", variant="primary")
+        login_msg = gr.Markdown("")
+
+    # VIEW 2: MAIN APP (Hidden)
+    with gr.Column(visible=False) as app_view:
+        with gr.Row(variant="panel"):
+            with gr.Column(scale=1):
+                file_input = gr.File(
+                    label="Upload Document",
+                    file_count="multiple",
+                    type="filepath",
+                )
+            with gr.Column(scale=2):
+                ingest_status = gr.Textbox(
+                    label="Ingestion Status",
+                    placeholder="Waiting for upload...",
+                    interactive=False,
+                    lines=3,
+                )
+
+        chatbot = gr.Chatbot(height=500)
+
+        with gr.Row():
+            msg = gr.Textbox(
+                placeholder="Ask a question about your documents...",
+                show_label=False,
+                scale=4,
             )
-        with gr.Column(scale=2):
-            # The Status Box
-            ingest_status = gr.Textbox(
-                label="Ingestion Status",
-                placeholder="Waiting for file upload...",
-                interactive=False,
-                lines=3,
-            )
+            send_btn = gr.Button("Send", variant="primary", scale=1)
+            reset_btn = gr.Button("Reset", variant="stop", scale=1)
 
-    chatbot = gr.Chatbot(height=400)
+        # Ingest needs the Token
+        file_input.upload(
+            fn=ingest_file,
+            inputs=[file_input, token_state],  # Pass token state
+            outputs=[ingest_status],
+        )
 
-    msg = gr.Textbox(placeholder="Type here...", show_label=False, scale=4)
-    with gr.Row():
-        send_btn = gr.Button("Send", variant="primary")
-        reset_btn = gr.Button("Reset Chat", variant="stop")
-    # with gr.Row():
-    # Scale=4 makes the text box take up 80% of the row
-    # Scale=1 makes the button take up 20%
-    # send_btn = gr.Button("Send", variant="primary", scale=1)
+        # Chat needs the Token
+        msg.submit(
+            fn=stream_chat,
+            inputs=[msg, chatbot, conversation_state, token_state],  # Pass token state
+            outputs=[msg, chatbot, conversation_state],
+        )
 
-    # reset_btn = gr.Button("Reset Conversation", variant="stop")
+        send_btn.click(
+            fn=stream_chat,
+            inputs=[msg, chatbot, conversation_state, token_state],  # Pass token state
+            outputs=[msg, chatbot, conversation_state],
+        )
 
-    # --- Event Wiring ---
-    file_input.upload(fn=ingest_file, inputs=[file_input], outputs=[ingest_status])
-    # 1. Pressing 'Enter' in the text box
-    msg.submit(
-        fn=stream_chat, inputs=[msg, chatbot, state], outputs=[msg, chatbot, state]
-    )
+        reset_btn.click(
+            fn=reset_logic,
+            outputs=[chatbot, msg, conversation_state],
+        )
 
-    # 2. Clicking the 'Send' button (Same function!)
-    send_btn.click(
-        fn=stream_chat, inputs=[msg, chatbot, state], outputs=[msg, chatbot, state]
-    )
-
-    # 3. Clicking the 'Reset' button
-    reset_btn.click(
-        fn=reset_logic,
-        inputs=None,
-        outputs=[chatbot, msg, state],  # Clears all three
+    login_btn.click(
+        fn=api_login,
+        inputs=[username_input, password_input],
+        outputs=[token_state, login_view, app_view, login_msg],
     )
 
 if __name__ == "__main__":
-    demo.queue().launch(server_name="0.0.0.0", server_port=7860)
+    demo.queue().launch(server_name="0.0.0.0", server_port=7860, theme=gr.themes.Soft())

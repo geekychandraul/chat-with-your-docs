@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audit import AuditLog
@@ -12,7 +14,7 @@ class AuditRepository:
         """
         self.db = db
 
-    async def log(self, action: str, metadata: dict):
+    async def log(self, action: str, metadata: dict, user_id: uuid.UUID):
         """Append an audit log entry.
 
         Args:
