@@ -3,8 +3,7 @@ A lightweight production grade Retrieval-Augmented Generation (RAG) demo that an
 
 Here is a quick demo of application:
 
-<video src="./src/resources/App_live_demo.mp4" controls width="600"></video>
-
+https://github.com/user-attachments/assets/55483ecc-fe1b-4960-a918-12b6a1516469
 
 ## TL;DR
 - Core Idea: This app is a production grade starter app in modular fasion to enable developers to add more features.
