@@ -151,6 +151,13 @@ class EmbeddingSettings(BaseSettings):
     COLLECTION_NAME: str = "documents"
 
 
+class LangsmithSettings(BaseSettings):
+    LANGSMITH_TRACING: str = "true"
+    LANGSMITH_API_KEY: str = "<your_key>"
+    LANGSMITH_PROJECT: str = "<name_of_your_project>"
+    LANGSMITH_ENDPOINT: str = "https://api.smith.langchain.com"
+
+
 class Settings(
     AppSettings,
     SQLiteSettings,
@@ -166,6 +173,7 @@ class Settings(
     CORSSettings,
     LLMSettings,
     EmbeddingSettings,
+    LangsmithSettings,
 ):
     model_config = SettingsConfigDict(
         env_file=os.path.join(

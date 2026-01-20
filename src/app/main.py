@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +24,12 @@ app.add_middleware(
     allow_headers=["*"],
     allow_methods=["*"],
 )
+
+# LANGSMITH CONFIG
+os.environ["LANGCHAIN_TRACING"] = settings.LANGSMITH_TRACING
+os.environ["LANGCHAIN_API_KEY"] = settings.LANGSMITH_API_KEY
+os.environ["LANGCHAIN_PROJECT"] = settings.LANGSMITH_PROJECT
+os.environ["LANGCHAIN_ENDPOINT"] = settings.LANGSMITH_ENDPOINT
 
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(ingest.router, prefix="/api/v1")
