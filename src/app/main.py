@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.apis.v1 import auth, chat, health, ingest
 from app.core.config import settings
-from app.core.exceptions.custom_exceptions import http_exception_handler
+from app.core.custom_exceptions import http_exception_handler
 from app.core.logging import setup_logging
 
 # Base.metadata.create_all(bind=async_engine)

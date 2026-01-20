@@ -1,8 +1,10 @@
 import hashlib
 import uuid
 
+from fastapi import status
 from fastapi.exceptions import HTTPException
 
+from app.core.custom_exceptions import DuplicateFileException
 from app.core.db.chroma import get_vectorstore
 from app.core.logging import get_logger
 from app.models.chunking import DocumentChunk
@@ -64,14 +66,20 @@ class IngestService:
             logger.exception("Error reading file: %s", e)
 
         try:
-            logger.info("Ingesting file %s with hash %s", file.filename, file_hash)
+            logger.info(
+                "Ingesting file %s with hash %s", file.filename, file_hash, user_id
+            )
             # Save file's metadata to db
-            file_meta: FileMetadata | None = await self.files.get_by_hash(file_hash)
+            file_meta: FileMetadata | None = await self.files.get_by_hash(
+                file_hash, user_id
+            )
             if file_meta:
                 # Handle Failed and duplicate file
                 if file_meta.status != "failed":
                     logger.info("Duplicate file detected for %s", file.filename)
-                    return {"status": "duplicate"}
+                    raise DuplicateFileException(
+                        detail="This file is already ingested. Please choose a different file.",
+                    )
                 else:
                     file_meta.status = "processing"
             else:
@@ -118,9 +126,18 @@ class IngestService:
                 "INGEST_SUCCESS", {"file_id": str(file_meta.id)}, user_id=user_id
             )
             return {"status": "ingested", "file_id": str(file_meta.id)}
+        except DuplicateFileException as dfe:
+            logger.warning("Duplicate file ingestion attempt: %s", dfe.detail)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=dfe.detail,
+            ) from dfe
         except Exception as e:
             file_meta.status = "failed"  # type: ignore
             await self.db.commit()
             await self.audit.log("INGEST_FAILED", {"error": str(e)}, user_id)
             logger.exception("Ingestion failed: %s", e)
-            raise HTTPException(status_code=500, detail="Ingestion failed") from e
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Ingestion failed",
+            ) from e

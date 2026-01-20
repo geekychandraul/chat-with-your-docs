@@ -85,10 +85,6 @@ class FirstUserSettings(BaseSettings):
     ADMIN_PASSWORD: str = "!Ch4ng3Th1sP4ssW0rd!"
 
 
-class TestSettings(BaseSettings):
-    ...
-
-
 class RedisCacheSettings(BaseSettings):
     REDIS_CACHE_HOST: str = "localhost"
     REDIS_CACHE_PORT: int = 6379
@@ -142,7 +138,9 @@ class CORSSettings(BaseSettings):
 
 
 class LLMSettings(BaseSettings):
-    OPENAI_API_KEY: str = ""
+    LLM_API_KEY: str = ""
+    LLM_MODEL: str = "gpt-5-mini"
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
 
 
 class EmbeddingSettings(BaseSettings):
@@ -159,7 +157,6 @@ class Settings(
     PostgresSettings,
     CryptSettings,
     FirstUserSettings,
-    TestSettings,
     RedisCacheSettings,
     ClientSideCacheSettings,
     RedisQueueSettings,
