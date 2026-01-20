@@ -4,7 +4,9 @@ from app.core.config import settings
 
 
 def openai_llm(
-    model_name: str = "gpt-5-mini", temperature: float = 0.2, streaming: bool = True
+    model_name: str = settings.LLM_MODEL,
+    temperature: float = 0.2,
+    streaming: bool = True,
 ) -> ChatOpenAI:
     """Create and return a configured ChatOpenAI instance.
 
@@ -20,11 +22,11 @@ def openai_llm(
         model=model_name,
         temperature=temperature,
         streaming=streaming,
-        api_key=settings.OPENAI_API_KEY,
+        api_key=settings.LLM_API_KEY,
     )
 
 
-def embedding_function(model_name: str = "text-embedding-3-small") -> OpenAIEmbeddings:
+def embedding_function(model_name: str = settings.EMBEDDING_MODEL) -> OpenAIEmbeddings:
     """Return an OpenAI embeddings client configured for the project.
 
     Args:
@@ -33,4 +35,4 @@ def embedding_function(model_name: str = "text-embedding-3-small") -> OpenAIEmbe
     Returns:
         OpenAIEmbeddings: embeddings client.
     """
-    return OpenAIEmbeddings(api_key=settings.OPENAI_API_KEY, model=model_name)
+    return OpenAIEmbeddings(api_key=settings.LLM_API_KEY, model=model_name)

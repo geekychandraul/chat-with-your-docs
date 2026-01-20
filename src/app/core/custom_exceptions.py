@@ -26,3 +26,8 @@ def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse
         status_code=exc.status_code,
         content={"detail": f"{exc.detail}, Please raise a support ticket."},
     )
+
+
+class DuplicateFileException(Exception):
+    def __init__(self, detail: str):
+        self.detail = detail

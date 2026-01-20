@@ -85,10 +85,6 @@ class FirstUserSettings(BaseSettings):
     ADMIN_PASSWORD: str = "!Ch4ng3Th1sP4ssW0rd!"
 
 
-class TestSettings(BaseSettings):
-    ...
-
-
 class RedisCacheSettings(BaseSettings):
     REDIS_CACHE_HOST: str = "localhost"
     REDIS_CACHE_PORT: int = 6379
@@ -142,7 +138,9 @@ class CORSSettings(BaseSettings):
 
 
 class LLMSettings(BaseSettings):
-    OPENAI_API_KEY: str = ""
+    LLM_API_KEY: str = ""
+    LLM_MODEL: str = "gpt-5-mini"
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
 
 
 class EmbeddingSettings(BaseSettings):
@@ -153,13 +151,19 @@ class EmbeddingSettings(BaseSettings):
     COLLECTION_NAME: str = "documents"
 
 
+class LangsmithSettings(BaseSettings):
+    LANGSMITH_TRACING: str = "true"
+    LANGSMITH_API_KEY: str = "<your_key>"
+    LANGSMITH_PROJECT: str = "<name_of_your_project>"
+    LANGSMITH_ENDPOINT: str = "https://api.smith.langchain.com"
+
+
 class Settings(
     AppSettings,
     SQLiteSettings,
     PostgresSettings,
     CryptSettings,
     FirstUserSettings,
-    TestSettings,
     RedisCacheSettings,
     ClientSideCacheSettings,
     RedisQueueSettings,
@@ -169,6 +173,7 @@ class Settings(
     CORSSettings,
     LLMSettings,
     EmbeddingSettings,
+    LangsmithSettings,
 ):
     model_config = SettingsConfigDict(
         env_file=os.path.join(

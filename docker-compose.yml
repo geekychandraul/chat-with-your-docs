@@ -22,19 +22,14 @@ services:
   db:
     container_name: db_test_rag
     image: postgres:13
-    environment:
-      POSTGRES_USER: hello_fastapi
-      POSTGRES_PASSWORD: hello_fastapi
-      POSTGRES_DB: rag_db
+    env_file:
+      - ./src/config/serverlocal.cfg
     ports:
       - 5432:5432
     restart: always
     healthcheck:
       test:
-        [
-          "CMD-SHELL",
-          "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'",
-        ]
+        ["CMD-SHELL", "sh -c 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB'"]
       interval: 10s
       timeout: 3s
       retries: 3
