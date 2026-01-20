@@ -35,7 +35,7 @@ Update values of `LLM_API_KEY` with the OpenAI api key (if using OpenAI). You ca
 
 3. **Run fastapi application**
 
-    a. Option 1: Using Make command and docker command
+    a. Option 1: Easiest way: Using Make command and docker command
     ```bash
     make init
     ```
@@ -149,6 +149,7 @@ This repo is a demonstration; the code is built to let you swap providers and ve
 
 
 **Why these choices**
+
 I have considered below based on the one fact: **Can the app be deployed and hosted as application.**
 
 ### Final choices for this project
@@ -169,13 +170,13 @@ I have considered below based on the one fact: **Can the app be deployed and hos
 - Basic logging is set up in `src/app/core/logging.py`. Health checks live under `src/app/apis/v1/health.py`.
 
 ## Key Acomplishements and Challanges:
-- Boiler Plate Code: Writing boiler plate code and converting a workign POC jupyter notebook to full fledged code.
-- Streaming: I could have sent the full data in a single response. But having a prod ready feature to incorporate streaming was important which as per my analysis langchain does not support out of the box if we use chain. Converting the PoC code into a full SSE endpoint was really fun.
-- Gradio: In PoC project, I had used a gradio's inbuilt simple chat interface but adding states and manage visibility was a learning curve to convert the app into a full prod ready app.
-- Permissioning: User base permissioning around files. This prompted me to add auth module.
-- Containers: Creating full fledged docker continer to run local servers. Writing docker files and make file was worth the effort. Adding config in make file to pick from server config file instead of hardcoding was a fun challange.
-- Observability & Telemerties: I have extensively used otel module directly and controlling what gets sent. Comparning on how to do at code level without spending money and learning to use langsmith was a learning curve.
-- Config settings: Creating a config setting files to think of all the secenarios and converting them to server configs.
+- **Boiler Plate Code:** Writing boiler plate code and converting a workign POC jupyter notebook to full fledged code.
+- **Streaming:** I could have sent the full data in a single response. But having a prod ready feature to incorporate streaming was important which as per my analysis langchain does not support out of the box if we use chain. Converting the PoC code into a full SSE endpoint was really fun.
+- **Gradio:** In PoC project, I had used a gradio's inbuilt simple chat interface but adding states and manage visibility was a learning curve to convert the app into a full prod ready app.
+- **Permissioning:** User base permissioning around files. This prompted me to add auth module.
+- **Containers:** Creating full fledged docker continer to run local servers. Writing docker files and make file was worth the effort. Adding config in make file to pick from server config file instead of hardcoding was a fun challange.
+- **Observability & Telemerties:** I have extensively used otel module directly and controlling what gets sent. Comparning on how to do at code level without spending money and learning to use langsmith was a learning curve.
+- **Config settings:** Creating a config setting files to think of all the secenarios and converting them to server configs.
 - **Pre-commit and linting:** though Linting and fomratting will be handled in CI pipeline but adding it at commit level incresaes standards.
 - **User based file segration**: Now different users can upload same files to create permission boundaries so that user data is independent.
 
